@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DOC AI - Continuous Chat</title>
+    <style>
+        body { background: #222831; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { padding: 12px 18px; border-radius: 15px; max-width: 75%; line-height: 1.4; }
+        .user { background: #00ADB5; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bot { background: #393E46; align-self: flex-start; border-bottom-left-radius: 2px; color: #00E5FF; border: 1px solid #00ADB5; }
+        #input-area { background: #393E46; padding: 20px; display: flex; gap: 10px; border-top: 2px solid #222831; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 16px; }
+        button { background: #00ADB5; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #555; }
+    </style>
+</head>
+<body>
+
+    <div id="chat-window">
+        <div class="msg bot">Hello! I am DOC. I can now remember our conversation. How are you feeling today?</div>
+    </div>
+
+    <form id="chat-form">
+        <div id="input-area">
+            <input type="file" id="file-input" style="display:none">
+            <button type="button" onclick="document.getElementById('file-input').click()">📎</button>
+            <button type="button" id="mic-btn">🎤</button>
+            <input type="text" id="user-input" placeholder="Ask a follow-up question..." autocomplete="off">
+            <button type="submit" id="send-btn">SEND</button>
+        </div>
+    </form>
+
+    <script>
+        const form = document.getElementById('chat-form');
+        const chatWindow = document.getElementById('chat-window');
+        const sendBtn = document.getElementById('send-btn');
+
+        // --- SPEECH RECOGNITION ---
+        const micBtn = document.getElementById('mic-btn');
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        
+        micBtn.onclick = () => {
+            recognition.start();
+            micBtn.innerText = "Listening...";
+        };
+        recognition.onresult = (e) => {
+            document.getElementById('user-input').value = e.results[0][0].transcript;
+            micBtn.innerText = "🎤";
+        };
+
+        // --- SEND LOGIC ---
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('user-input');
+            const fileBox = document.getElementById('file-input');
+            const message = input.value.trim();
+            
+            if (!message && !fileBox.files[0]) return;
+
+            // UI: Add User Bubble and Disable Input
+            addBubble(message || "File uploaded", 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('message', message);
+            if(fileBox.files[0]) formData.append('file', fileBox.files[0]);
+
+            try {
+                const response = await fetch('/ask', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                // UI: Add Bot Response
+                addBubble(data.response, 'bot');
+                
+                // Voice Response
+                const speech = new SpeechSynthesisUtterance(data.response);
+                window.speechSynthesis.speak(speech);
+            } catch (err) {
+                addBubble("Lost connection to DOC.", 'bot');
+            } finally {
+                sendBtn.disabled = false;
+                fileBox.value = ''; // Reset file input
+            }
+        };
+
+        function addBubble(text, sender) {
+            const div = document.createElement('div');
+            div.className = `msg ${sender}`;
+            div.innerText = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll to bottom
+        }
+    </script>
+</body>
+</html>
