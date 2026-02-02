@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 SYSTEM_PROMPT = (
     "You are DOC, a smart, professional medical chatbot who can have ongoing conversations. "
@@ -28,5 +28,6 @@ def ask_medical_gemini(history):
     except Exception as e:
         print("Gemini error:", e)
         return "Sorry, I'm having trouble connecting to the medical engine right now."
+
 
 
